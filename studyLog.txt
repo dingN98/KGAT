@@ -25,3 +25,101 @@ ps:今天跑了2公里，用了11分半。
 3、怎么和基线比较性能
 
 只能下午开始了，上午都在聊天。
+
+一个执行命令
+python Main.py --model_type kgat --alg_type bi --dataset last-fm --regs [1e-5,1e-5] --layer_size [64,32,16] --embed_size 64 --lr 0.0001 --epoch 1000 --verbose 50 --save_flag 1 --pretrain -1 --batch_size 1024 --node_dropout [0.1] --mess_dropout [0.1,0.1,0.1] --use_att True --use_kge True
+预计跑完1000个epoch，需要2.7天
+
+Main.py
+
+1、首先是加载数据集 load_data.py
+（1）得到训练集和测试集  self._load_ratings()
+self.train_data, self.train_user_dict = self._load_ratings(train_file)     train_file = path + '/train.txt'
+train.txt  每一行是 【userid,item1,itme2,...】   train_data 是一个矩阵，每一行是【userid,itemid】  train_user_dict 是一个dict()，key是userID,value是这个user交互的items【item1，item2，...】
+self.test_data, self.test_user_dict = self._load_ratings(test_file)  类似
+（2）得到知识图谱相关数据 self._load_kg()
+kg_dict  是一个字典  kg[head].append((tail, relation))
+relation_dict   是一个字典  rd[relation].append((head, tail))
+（3）生成 batch_size 大小的正样品和负样品  _generate_train_cf_batch()
+return users, pos_items, neg_items
+其中，users 是 batch_size 大小的[]
+pos_items 是 batch_size * num 的矩阵， 是指 train_user_dict 里面涉及到的数据
+neg_items 是 train_user_dict 里面没提到的数据
+
+KGAT.py
+
+def __init__(self, data_config, pretrain_data, args):
+        self._parse_args(data_config, pretrain_data, args)
+        '''
+        *********************************************************
+        Create Placeholder for Input Data & Dropout.
+        '''
+        self._build_inputs()
+
+        """
+        *********************************************************
+        Create Model Parameters for CF & KGE parts.
+        """
+        self.weights = self._build_weights()
+
+        """
+        *********************************************************
+        Compute Graph-based Representations of All Users & Items & KG Entities via Message-Passing Mechanism of Graph Neural Networks.
+        Different Convolutional Layers:
+            1. bi: defined in 'KGAT: Knowledge Graph Attention Network for Recommendation', KDD2019;
+            2. gcn:  defined in 'Semi-Supervised Classification with Graph Convolutional Networks', ICLR2018;
+            3. graphsage: defined in 'Inductive Representation Learning on Large Graphs', NeurIPS2017.
+        """
+        self._build_model_phase_I()
+        """
+        Optimize Recommendation (CF) Part via BPR Loss.
+        """
+        self._build_loss_phase_I()
+
+        """
+        *********************************************************
+        Compute Knowledge Graph Embeddings via TransR.
+        """
+        self._build_model_phase_II()
+        """
+        Optimize KGE Part via BPR Loss.
+        """
+        self._build_loss_phase_II()
+
+        self._statistics_params()
+
+1、参数转换 def _parse_args(self, data_config, pretrain_data, args)
+首先获取 n_users n_items n_entities n_relations
+然后是其他数据   来自   loader_kgat.py
+（1）根据 user-item 交互数据 生成 稀疏的邻接矩阵
+
+# generate the sparse adjacency matrices for user-item interaction & relational kg data.
+self.adj_list, self.adj_r_list = self._get_relational_adj_list()
+
+
+
+Epoch 0 [261.7s]: train==[789.20233=39.57340 + 749.46057 + 0.16889]
+[n_users, n_items]=[23566, 48123]
+[n_train, n_test]=[1289003, 423635]
+[n_entities, n_relations, n_triples]=[106389, 9, 464567]
+[batch_size, batch_size_kg]=[1024, 369]
+[n_users, n_items]=[23566, 48123]
+[n_train, n_test]=[1289003, 423635]
+[n_entities, n_relations, n_triples]=[106389, 9, 464567]
+[batch_size, batch_size_kg]=[1024, 369]
+        convert ratings into adj mat done.
+        convert ratings into adj mat done.
+[n_users, n_items]=[23566, 48123]
+[n_train, n_test]=[1289003, 423635]
+[n_entities, n_relations, n_triples]=[106389, 9, 464567]
+[batch_size, batch_size_kg]=[1024, 369]
+[n_users, n_items]=[23566, 48123]
+[n_train, n_test]=[1289003, 423635]
+[n_entities, n_relations, n_triples]=[106389, 9, 464567]
+[batch_size, batch_size_kg]=[1024, 369]
+[n_users, n_items]=[23566, 48123]
+[n_train, n_test]=[1289003, 423635]
+[n_entities, n_relations, n_triples]=[106389, 9, 464567]
+[batch_size, batch_size_kg]=[1024, 369]
+        convert 20 relational triples into adj mat done. @0.4528s
+        convert 20 relational triples into adj mat done. @0.4299s

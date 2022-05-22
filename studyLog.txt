@@ -50,18 +50,8 @@ KGAT.py
 
 def __init__(self, data_config, pretrain_data, args):
         self._parse_args(data_config, pretrain_data, args)
-        '''
-        *********************************************************
-        Create Placeholder for Input Data & Dropout.
-        '''
         self._build_inputs()
-
-        """
-        *********************************************************
-        Create Model Parameters for CF & KGE parts.
-        """
         self.weights = self._build_weights()
-
         """
         *********************************************************
         Compute Graph-based Representations of All Users & Items & KG Entities via Message-Passing Mechanism of Graph Neural Networks.
@@ -71,21 +61,9 @@ def __init__(self, data_config, pretrain_data, args):
             3. graphsage: defined in 'Inductive Representation Learning on Large Graphs', NeurIPS2017.
         """
         self._build_model_phase_I()
-        """
-        Optimize Recommendation (CF) Part via BPR Loss.
-        """
         self._build_loss_phase_I()
-
-        """
-        *********************************************************
-        Compute Knowledge Graph Embeddings via TransR.
-        """
         self._build_model_phase_II()
-        """
-        Optimize KGE Part via BPR Loss.
-        """
         self._build_loss_phase_II()
-
         self._statistics_params()
 
 1、参数转换 def _parse_args(self, data_config, pretrain_data, args)

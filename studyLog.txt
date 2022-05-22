@@ -101,3 +101,8 @@ Epoch 0 [261.7s]: train==[789.20233=39.57340 + 749.46057 + 0.16889]
 [batch_size, batch_size_kg]=[1024, 369]
         convert 20 relational triples into adj mat done. @0.4528s
         convert 20 relational triples into adj mat done. @0.4299s
+
+2022.5.20 玩
+2022.5.21 玩
+2022.5.22
+继续干活儿

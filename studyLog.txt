@@ -48,23 +48,6 @@ neg_items 是 train_user_dict 里面没提到的数据
 
 KGAT.py
 
-def __init__(self, data_config, pretrain_data, args):
-        self._parse_args(data_config, pretrain_data, args)
-        self._build_inputs()
-        self.weights = self._build_weights()
-        """
-        *********************************************************
-        Compute Graph-based Representations of All Users & Items & KG Entities via Message-Passing Mechanism of Graph Neural Networks.
-        Different Convolutional Layers:
-            1. bi: defined in 'KGAT: Knowledge Graph Attention Network for Recommendation', KDD2019;
-            2. gcn:  defined in 'Semi-Supervised Classification with Graph Convolutional Networks', ICLR2018;
-            3. graphsage: defined in 'Inductive Representation Learning on Large Graphs', NeurIPS2017.
-        """
-        self._build_model_phase_I()
-        self._build_loss_phase_I()
-        self._build_model_phase_II()
-        self._build_loss_phase_II()
-        self._statistics_params()
 
 1、参数转换 def _parse_args(self, data_config, pretrain_data, args)
 首先获取 n_users n_items n_entities n_relations
@@ -106,3 +89,60 @@ Epoch 0 [261.7s]: train==[789.20233=39.57340 + 749.46057 + 0.16889]
 2022.5.21 玩
 2022.5.22
 继续干活儿
+上回解析了Main.py里的主要逻辑：
+生成训练集、测试集、知识图谱相关数据、batch_size大小的正样品和负样品
+
+在研究 KGAT.py之前，需要研究 loader_kgat.py  它为KGAT.py提供数据来源
+
+loader_kgat.py   做的准备工作如下：
+
+# generate the sparse adjacency matrices for user-item interaction & relational kg data.
+# 生成稀疏的邻接矩阵（user-item交互矩阵、KG关系），adj_list 包含所有的user-item的交互矩阵  还有逆矩阵，adj_r_list 包含所有的  关系id
+# 用稀疏矩阵变量adj_mat_list存储CF与KG的连通信息。
+self.adj_list, self.adj_r_list = self._get_relational_adj_list()
+
+# generate the sparse laplacian matrices.
+# 生成稀疏的拉普拉斯矩阵，主要是上一步得到的稀疏CF及KG连通矩阵进行归一化操作。
+# 这里重点说一下为啥需要归一化：原始的连通矩阵是没有归一化的，如果没有归一化的连通矩阵与特征矩阵相乘会改变特征的原本分布，产生一些不可预测的问题，所以需要对连通矩阵进行标准化处理。
+self.lap_list = self._get_relational_lap_list()
+
+# generate the triples dictionary, key is 'head', value is '(tail, relation)'.
+# 生成三元组字典： all_kg_dict[head].append((tail, relation))
+self.all_kg_dict = self._get_all_kg_dict()
+
+# 获取所有的 head列表，relation列表、tail列表，data列表
+self.all_h_list, self.all_r_list, self.all_t_list, self.all_v_list = self._get_all_kg_data()
+
+接着研究核心代码 KGAT.py
+
+# 解析参数，包含 n_users、n_items、若干邻接矩阵 等等
+self._parse_args(data_config, pretrain_data, args)
+
+# Create Placeholder for Input Data & Dropout.
+self._build_inputs()
+
+# Create Model Parameters for CF & KGE parts.
+# 构建所有的权重  all_weights = dict()  如果存在预训练数据，那么使用，否则使用 xavier 初始化随机数据
+# 权重包括：用户嵌入 user_embed 【n_users * emb_dim】实体嵌入 entity_embed 【n_entities * emb_dim】 物品嵌入 item_embed 关系嵌入  relation_embed
+# ??? trans_W   tf.Variable(initializer([self.n_relations, self.emb_dim, self.kge_dim]))   ??? 这里需要研究下
+# ??? gc、bi、mlp三层是啥???
+# 执行命令 python Main.py 里有一个参数  --layer_size [64,32,16]
+而 self.weight_size = eval(args.layer_size)   self.n_layers = len(self.weight_size)  这里的layer_size  就是 3
+# 然后遍历这三层layer，继续往 all_weights 里加入参数  三层  gc bi mlp
+# 三层 W 其实对应着  emb_dim * 64 、 64*32 、(2*32) * 16
+# 三层 b 对应着 1*64、1*32、1*16
+self.weights = self._build_weights()
+
+# Compute Graph-based Representations of All Users & Items & KG Entities via Message-Passing Mechanism of Graph Neural Networks.
+# Different Convolutional Layers:
+# 使用不同的卷积层，通过KG的消息传递机制，计算所有的 user、item、entity的 表示
+# python Main.py --model_type kgat --alg_type bi
+self._build_model_phase_I()
+
+self._build_loss_phase_I()
+
+self._build_model_phase_II()
+
+self._build_loss_phase_II()
+
+self._statistics_params()

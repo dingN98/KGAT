@@ -133,16 +133,53 @@ self._build_inputs()
 # 三层 b 对应着 1*64、1*32、1*16
 self.weights = self._build_weights()
 
+
+
+2022.5.23
+今天白天都在和 htw 一起搞服务器，成功装到机架上了，但是还是IP有问题。
+晚上继续学习小论文代码！！！
+
 # Compute Graph-based Representations of All Users & Items & KG Entities via Message-Passing Mechanism of Graph Neural Networks.
-# Different Convolutional Layers:
 # 使用不同的卷积层，通过KG的消息传递机制，计算所有的 user、item、entity的 表示
-# python Main.py --model_type kgat --alg_type bi
+# Different Convolutional Layers: bi  、 gcn 、 graphsage  这其实是 当前实体的信息 和 邻域实体 信息聚合的三种方式
+# python Main.py --model_type kgat --alg_type bi  可见论文作者默认使用 bi 卷积层，因为从论文的实验结果来看，bi聚合器的 指标最好
+# 三个核心函数的核心不同点代码
+# 1、 _create_bi_interaction_embed()    fBi-Interaction =LeakyReLU?W1(eh + eNh )?+ LeakyReLU?W2(eh ⊙ eNh )?,
+# add_embeddings = ego_embeddings + side_embeddings
+# bi_embeddings = tf.multiply(ego_embeddings, side_embeddings)
+# 2、_create_gcn_embed()    fGCN = LeakyReLU?W(eh + eNh )?
+# embeddings = tf.concat(temp_embed, 0)
+# 3、_create_graphsage_embed()     fGraphSage = LeakyReLU?W(eh ||eNh )?
+#  embeddings = tf.concat([pre_embeddings, embeddings], 1)
 self._build_model_phase_I()
 
+# Optimize Recommendation (CF) Part via BPR Loss.
+# 对应论文 3.4 节  LCF =X(u,i, j)∈ O− ln σ ? ˆy(u, i) − ˆy(u, j)?
 self._build_loss_phase_I()
 
+# Compute Knowledge Graph Embeddings via TransR.
+# 计算 实体的 TransR 嵌入
 self._build_model_phase_II()
 
+# Optimize KGE Part via BPR Loss.
+# 优化 KGE 的损失函数
 self._build_loss_phase_II()
 
+# 打印静态参数
 self._statistics_params()
+
+重点来了！！！
+Main.py 继续 Train
+是否使用 KGE 模型 和 是否使用注意力机制  是可以调节的！
+264行    if args.use_kge is True:
+278行    if args.use_att is True:
+
+for epoch in range(args.epoch):
+    phase 1: to train the recommender.
+    phase 2: to train the KGE method & update the attentive Laplacian matrix.
+    Test.
+    Performance logging.
+
+明天继续！
+
+

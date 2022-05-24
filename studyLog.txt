@@ -182,4 +182,49 @@ for epoch in range(args.epoch):
 
 明天继续！
 
+2022.5.24
+白天在搞解决 HDFS 的 bug，晚上继续搞论文
+
+首先要搞明白
+1、是不是一定要用KGE模型
+（1）这个KGE需要的训练数据怎么生成?
+loader_kgat.py  里面的 _generate_train_A_batch()方法
+heads, relations, pos_tails, neg_tails = self._generate_train_A_batch()
+
+需要知道这个方法是怎么生成 batch_size 大小的训练数据的
+首先，需要知道 all_kg_dict 里记录了所有的知识图谱三元组  all_kg_dict[head].append((tail, relation))
+然后，这个 all_kg_dict 里出现的三元组 (h,r,t) 是 pos训练数据， 里面没出现的是 neg训练数据
+怎么从 all_kg_dict 里获取这两种数据？ 对于 pos数据，直接从 all_kg_dict 随机选取 batch_size 大小的 数据即可，即为 heads, relations, pos_tails
+然后对于每一个 header ，随机生成一个 不在 all_dict[header] 里出现过得 tail，就是 neg_tail  然后最后得到  neg_tails
+
+（2）怎么训练KGE
+首先将 self._generate_train_A_batch() 生成的数据构造成 feed_dict 的字典格式
+feed_dict = {
+            model.h: batch_data['heads'],
+            model.r: batch_data['relations'],
+            model.pos_t: batch_data['pos_tails'],
+            model.neg_t: batch_data['neg_tails'],
+
+        }
+注意，这里的例如 model.h  会覆盖 例如model是KGAT里定义的  self.h
+然后就是，这里的 self.h 只是 KG 里 head 节点的 id
+定义的 self.h_e  才是 h 的 嵌入，初始的嵌入是 随机生成的，二者通过下面这个函数建立关系：
+self.h_e, self.r_e, self.pos_t_e, self.neg_t_e = self._get_kg_inference(self.h, self.r, self.pos_t, self.neg_t)
+以 head 为例   h_e = tf.nn.embedding_lookup(embeddings, h)   一开始 h 对应的 h_e  是随机生成的
+
+然后才是训练
+_, batch_loss, batch_kge_loss, batch_reg_loss = model.train_A(sess, feed_dict=feed_dict)
+train_A() 的具体工作
+sess.run([self.opt2, self.loss2, self.kge_loss2, self.reg_loss2], feed_dict)
+和论文里公式相对应的代码部分如下：
+kg_score = tf.reduce_sum(tf.square((h_e + r_e - t_e)), 1, keepdims=True)
+kg_loss = tf.reduce_mean(tf.nn.softplus(-(neg_kg_score - pos_kg_score)))
+
+其实，TransR模型的训练，需要将 h 和 t 映射到 r 的维度，然后再执行 h+r-t 这种。好像论文作者为了简化计算，设置的 h、r、t 的维度都是 64      --embed_size 64
+
+（3）终于到了最终问题，要不要使用KGE模型
+我觉得要解决这个问题，得先解决下一个问题。就是本文作者除了使用了KGE，还使用了基于注意力机制的信息传播和信息聚合，这个东西的作用是啥？如果只用这个，不用KGE的影响。
+
+
+2、是不是一定要用注意力机制
 

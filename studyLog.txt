@@ -252,6 +252,10 @@ base_loss = tf.reduce_mean(tf.nn.softplus(-(pos_scores - neg_scores)))
 
 2022.5.25
 要解决俩遗留问题
+1、注意力机制的问题
+论文里实体 h 和它的邻域实体 t 之间的有一个注意力系数 π，公式为 π(h, r, t) = (Wr et )⊤tanh?(Wr eh + er )?
+需要先找到这个公式对应着代码的哪个位置。。。
+
 1、KGE的权重问题  self.weights['trans_W']
 2、基于user-item的训练  和 基于 h-r-t 的训练的区别
 

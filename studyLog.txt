@@ -256,6 +256,59 @@ base_loss = tf.reduce_mean(tf.nn.softplus(-(pos_scores - neg_scores)))
 论文里实体 h 和它的邻域实体 t 之间的有一个注意力系数 π，公式为 π(h, r, t) = (Wr et )⊤tanh?(Wr eh + er )?
 需要先找到这个公式对应着代码的哪个位置。。。
 
+我先理解 本实体的信息和邻域实体的信息聚合问题
+以 bi 方式做信息聚合为例： 主要涉及到 （1）邻域信息的确立 （2）+聚合方式   （3）乘法聚合方式
+（1）领域信息的确立
+# sum messages of neighbors.
+side_embeddings = tf.concat(temp_embed, 0)
+（2）+聚合方式
+# sum messages of neighbors.
+add_embeddings = ego_embeddings + side_embeddings
+# transformed sum messages of neighbors.
+sum_embeddings = tf.nn.leaky_relu(tf.matmul(add_embeddings, self.weights['W_gc_%d' % k]) + self.weights['b_gc_%d' % k])
+（3）乘法聚合方式
+# bi messages of neighbors.
+bi_embeddings = tf.multiply(ego_embeddings, side_embeddings)
+# transformed bi messages of neighbors.
+bi_embeddings = tf.nn.leaky_relu(tf.matmul(bi_embeddings, self.weights['W_bi_%d' % k]) + self.weights['b_bi_%d' % k])
+（4）将以上两种聚合方式的结果相加，在做 dropout 和 正则化
+ego_embeddings = bi_embeddings + sum_embeddings
+ego_embeddings = tf.nn.dropout(ego_embeddings, 1 - self.mess_dropout[k])
+norm_embeddings = tf.math.l2_normalize(ego_embeddings, axis=1)
+（5）再将结果加入[]  以便实现论文里的多层传播后的嵌入的拼接（在第一个维度的拼接）
+all_embeddings += [norm_embeddings]
+all_embeddings = tf.concat(all_embeddings, 1)
+
+然后找到在哪里体现了邻域实体信息的计算
+self.A_in
+论文里是这样写的：
+Knowledge-aware Attention:
+We implement π(h, r, t) via relational attention mechanism, which is formulated as follows:
+π(h, r, t) = (Wr et )⊤tanh?(Wr eh + er )?
+
+在代码里，
+model.update_attentive_A(sess)  会更新 self.A_in
+
+然后就是 邻域实体的信息 和 注意力系数 相乘
+论文里是    eNh =X(h,r,t)∈Nh π(h, r, t)et
+对应着代码里以下几行：
+A = self.A_in
+A_fold_hat = self._split_A_hat(A)
+temp_embed = []
+for f in range(self.n_fold):
+      temp_embed.append(tf.sparse_tensor_dense_matmul(A_fold_hat[f], ego_embeddings))
+这个 temp_embed 就是聚合后的邻域实体信息list
+
+
+2、高阶连通性问题
+就是 n 层的传播，作者实验得出3层最佳。需要将这 n 层的嵌入拼接起来  e∗u = e(0)u ∥· · · ∥e(L)u , e∗i = e(0)i ∥· · · ∥e(L)i
+对应的代码在 例如函数 _create_graphsage_embed(self)   中的
+all_embeddings = [pre_embeddings]
+all_embeddings += [norm_embeddings]
+all_embeddings = tf.concat(all_embeddings, 1)
+ua_embeddings, ea_embeddings = tf.split(all_embeddings, [self.n_users, self.n_entities], 0)
+
+
 1、KGE的权重问题  self.weights['trans_W']
 2、基于user-item的训练  和 基于 h-r-t 的训练的区别
 

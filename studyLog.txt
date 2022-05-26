@@ -378,4 +378,27 @@ self.weights['W_gc_%d' % k] + self.weights['b_gc_%d' % k])
 self.weights['W_bi_%d' % k] + self.weights['b_bi_%d' % k]
 self.weights['W_mlp_%d' % k] + self.weights['b_mlp_%d' % k]
 
+这个 A_in 我觉得很复杂，有必要深入理解下 A_in 是怎样起作用的！
+感觉可以拿   def _create_bi_interaction_embed(self):  作为突破口看下
+有一个参数  self.n_fold = 100  这个有啥用呢？
+A = self.A_in
+A_fold_hat = self._split_A_hat(A)  的作用是将 A 切片，每100个为一个切片，这些切片组成 list
+继续往下看，
+ego_embeddings = tf.concat([self.weights['user_embed'], self.weights['entity_embed']], axis=0)
+for k in range(0, self.n_layers):
+    temp_embed = []
+    for f in range(self.n_fold):
+        temp_embed.append(tf.sparse_tensor_dense_matmul(A_fold_hat[f], ego_embeddings))
 
+# sum messages of neighbors.
+side_embeddings = tf.concat(temp_embed, 0)
+
+因此，我觉得将 A_in 做切片，再计算，再合并，是为了防止 A_in 因为太大导致计算出问题。
+只要 A_in 的列的数目 和 ego_embeddings 的行数目相等就行。
+ego_embedding 的维度是 (n_users + n_entities) * emb_dim
+而 A_in 的维度是 在 def update_attentive_A(self, sess) 里揭示了，如下：
+self.A_in = sp.coo_matrix((new_A_values, (rows, cols)), shape=(self.n_users + self.n_entities,
+                                                                       self.n_users + self.n_entities))
+因此，维度上完全符合， A_in  就是注意力机制矩阵。
+下面研究 A_in 是怎么定义的。
+交给明天研究，晚上和小徐去吃炸鸡。

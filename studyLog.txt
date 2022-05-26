@@ -342,8 +342,40 @@ self.adj_list, self.adj_r_list = self._get_relational_adj_list()
 
 
 （2）_bi_norm_lap()  双归一化过程
+说实话，这个函数我完全看不懂
+感觉这篇论文的代码实现很复杂。感觉写了很多冗余的东西（这些东西论文里没有提到）
 
+config['A_in'] = sum(data_generator.lap_list)
+我试图寻找其他突破口  A_out  A_in
+self.A_out = self._create_attentive_A_out()
+new_A = sess.run(self.A_out, feed_dict={self.A_values: kg_score})
+new_A_values = new_A.values
+new_A_indices = new_A.indices
+self.A_in = sp.coo_matrix((new_A_values, (rows, cols)), shape=(self.n_users + self.n_entities,self.n_users + self.n_entities))
 
+上网查找提示如下：
+def _get_relational_adj_list(self):     用稀疏矩阵变量adj_mat_list存储CF与KG的连通信息。
+def _get_relational_lap_list(self):     将上一步得到的稀疏CF及KG连通矩阵进行归一化操作。
+然后开始梳理脉络：
+self.adj_list, self.adj_r_list = self._get_relational_adj_list()
+# adj_list的作用是得到 lap_list ，然后就没用了
+self.lap_list = self._get_relational_lap_list()
+# lap_list的作用的得到 A_in
+config['A_in'] = sum(data_generator.lap_list)
+# 在 _create_bi_interaction_embed(self) 中，A_in的作用如下
+A = self.A_in
+A_fold_hat = self._split_A_hat(A)
+temp_embed.append(tf.sparse_tensor_dense_matmul(A_fold_hat[f], ego_embeddings))
+# temp_embed 就是 h 的邻域实体的乘上注意力机制后的 嵌入
+side_embeddings = tf.concat(temp_embed, 0)
+# 上面这步和论文里的 公式(3) 对应起来了
 
-2、基于user-item的训练  和 基于 h-r-t 的训练的区别
+综上，这篇论文里，我觉得比较复杂的是三种权重
+（1）KGE的权重  self.weights['trans_W']  用于将 h 和 t 映射到 r 所在的空间
+（2）邻域实体的信息聚合涉及到的注意力机制  A_in
+（3）最后是邻域实体的信息和实体h的信息聚合时，采用的三种聚合方式对应的三种权重，即
+self.weights['W_gc_%d' % k] + self.weights['b_gc_%d' % k])
+self.weights['W_bi_%d' % k] + self.weights['b_bi_%d' % k]
+self.weights['W_mlp_%d' % k] + self.weights['b_mlp_%d' % k]
+
 

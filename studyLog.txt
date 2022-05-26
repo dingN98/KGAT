@@ -331,8 +331,17 @@ trans_W: [self.n_relations, self.emb_dim, self.kge_dim]
 代码里
 Main.py    config['A_in'] = sum(data_generator.lap_list)
 loader_kgat.py   self.lap_list = self._get_relational_lap_list()
-if self.args.adj_type == 'bi':   ???
+if self.args.adj_type == 'bi':
+    lap_list = [_bi_norm_lap(adj) for adj in self.adj_list]
 对应着执行语句  python Main.py --model_type kgat --alg_type bi
+接着搞懂俩东西：
+（1）self.adj_list
+出自 loader_kgat.py
+# generate the sparse adjacency matrices for user-item interaction & relational kg data.
+self.adj_list, self.adj_r_list = self._get_relational_adj_list()
+
+
+（2）_bi_norm_lap()  双归一化过程
 
 
 

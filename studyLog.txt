@@ -309,6 +309,32 @@ all_embeddings = tf.concat(all_embeddings, 1)
 ua_embeddings, ea_embeddings = tf.split(all_embeddings, [self.n_users, self.n_entities], 0)
 
 
+2022.5.26
+
 1、KGE的权重问题  self.weights['trans_W']
+
+首先考虑各种实体嵌入的维度
+user_embed ： [self.n_users, self.emb_dim]
+entity_embed：  [self.n_entities, self.emb_dim]
+relation_embed: [self.n_relations, self.kge_dim]
+
+然后是 KGE 权重的维度，目的是将 h 和 t 所在的空间映射到 r 所在的空间
+trans_W: [self.n_relations, self.emb_dim, self.kge_dim]
+
+对应的 h-r-t 的公式为：
+д(h, r, t) = ??Wr eh + er − Wr et ??22
+解读： 对于一组三元组(h,r,t) ， h 和 t 和 trans_W 相乘后 ，维度将从 [1,emb_dim] 变成 [1,kge_dim] ，就和 r 的维度一样了。
+
+2、user-item 的权重问题  A_in
+论文里对应的是：
+π(h, r, t) = (Wr et )⊤tanh?(Wr eh + er )?
+代码里
+Main.py    config['A_in'] = sum(data_generator.lap_list)
+loader_kgat.py   self.lap_list = self._get_relational_lap_list()
+if self.args.adj_type == 'bi':   ???
+对应着执行语句  python Main.py --model_type kgat --alg_type bi
+
+
+
 2、基于user-item的训练  和 基于 h-r-t 的训练的区别
 

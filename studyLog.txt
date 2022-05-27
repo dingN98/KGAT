@@ -402,3 +402,6 @@ self.A_in = sp.coo_matrix((new_A_values, (rows, cols)), shape=(self.n_users + se
 因此，维度上完全符合， A_in  就是注意力机制矩阵。
 下面研究 A_in 是怎么定义的。
 交给明天研究，晚上和小徐去吃炸鸡。
+
+2022.5.27
+我感觉KGAT不用再深入研究了，下面开始直接搞 KRAN

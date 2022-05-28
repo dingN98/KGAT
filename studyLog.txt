@@ -404,4 +404,52 @@ self.A_in = sp.coo_matrix((new_A_values, (rows, cols)), shape=(self.n_users + se
 交给明天研究，晚上和小徐去吃炸鸡。
 
 2022.5.27
-我感觉KGAT不用再深入研究了，下面开始直接搞 KRAN
+我感觉KGAT不用再深入研究了
+下面开始研究下怎么使用 movielens 数据集构建 训练集
+（1）ml-25m 相关数据
+user 只包含用户id，不包含其他任何人口统计学信息
+每个用户至少评论了20部电影
+
+格式：
+1）评级数据文件结构 (ratings.csv)，每一行代表一个用户对一部电影的一个评分，格式如下：用户 ID、电影 ID、评分、时间戳
+评级采用 5 星等级，以半星为增量（0.5 星 - 5.0 星）。
+2）标签数据文件结构 (tags.csv)，每一行代表一个用户对一部电影应用的一个标签，格式如下：用户 ID、电影 ID、标签、时间戳
+标签是用户生成的关于电影的元数据。每个标签通常是一个单词或短语。特定标签的含义、价值和用途由每个用户确定。
+3）电影数据文件结构 (movies.csv)，每一行代表一部电影，格式如下：电影 ID、标题、流派
+4）链接数据文件结构 (links.csv)，每一行代表一部电影，格式如下：电影 ID、imdbId、tmdbId
+movieId 是 <https://movielens.org> 使用的电影的标识符。例如，电影《玩具总动员》有链接 <https://movielens.org/movies/1>。
+imdbId 是 <http://www.imdb.com> 使用的电影的标识符。例如，电影《玩具总动员》有链接 <http://www.imdb.com/title/tt0114709/>。
+tmdbId 是 <https://www.themoviedb.org> 使用的电影的标识符。例如，电影《玩具总动员》有链接 <https://www.themoviedb.org/movie/862>。
+5）标记基因组（genome-scores.csv 和 genome-tags.csv），
+基因组被分成两个文件。文件 `genome-scores.csv` 包含以下格式的电影标签相关数据：电影 ID、标签 ID、相关性
+第二个文件“genome-tags.csv”提供基因组文件中标签 ID 的标签描述，格式如下：标签ID，标签
+
+
+我感觉应该是先使用 neo4j 之类的图数据库生成 movies 知识图谱，然后将 h-r-t 三元组导出，将 user-item-rating 导出
+这两者分别作为 kg.txt 和 rating.txt ，用作构建KG图和 u-i交互图，然后构建联合知识图谱
+
+
+2022.5.28
+从movielens官网下载的 genome_2021.zip 包含了 movie 的一些其他信息，可以用来建立 movie KG
+（1）meta.json
+{
+    "title": "Toy Story (1995)",
+    "directedBy": "John Lasseter",
+    "starring": "Tim Allen, Tom Hanks, Don Rickles, Jim Varney, John Ratzenberger, Wallace Shawn, Laurie Metcalf, John Morris, R. Lee Ermey, Annie Potts",
+    "dateAdded": null,
+    "avgRating": 3.89146,
+    "imdbId": "0114709",
+    "item_id": 1
+}
+包含了movie的 导演、演员list、平均得分
+
+我的思路：
+结合这个 movie 的 metadata.json 和 movies.csv 里提供的电影 genres 信息，构建 movie 知识图谱。
+更进一步，就是结合 metadata.json 提供的 imdbid ，去爬取对应电影的多模态信息（这个留给毕设去做）
+
+当前的主要任务是
+1、构建 movie 知识图谱 和 user-item 的联合知识图谱
+2、自己想一个模型，起一个名字，可以和 KGAT 、KRAN 和 KGCN 扯上关系。准备对比实验。
+
+今天先完成 1
+

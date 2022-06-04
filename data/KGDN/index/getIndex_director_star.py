@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import re
 
 # filepath = '../metadata.json'
 filepath = '../fullData/metadata.json'
@@ -18,8 +19,9 @@ with open(filepath,'r',encoding='utf-8') as f:
         data = json.loads(line)
 
         director = data["directedBy"]
+        director = re.sub(r'[^a-zA-Z0-9 ()]', '', director)
         stars = data["starring"].split(",")
-        stars = [i.strip() for i in stars]
+        stars = [re.sub(r'[^a-zA-Z0-9 ()]', '', i.strip()) for i in stars]
 
         if director not in director_list_tmp:
             director_list_tmp.append(director)

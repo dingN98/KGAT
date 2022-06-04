@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 
 # filepath = 'movies.csv'
 filepath = '../fullData/movies.csv'
@@ -12,7 +13,8 @@ row_list = csv_result.values.tolist()
 # print(row_list)
 relation_list = []
 for line in row_list:
-    movie_name = line[1].replace(","," ")
+    movie_name = line[1]
+    movie_name = re.sub(r'[^a-zA-Z0-9 ()]', '', movie_name)
     genres = line[2].split('|')
     for genre in genres:
         relation = "%s,genre,%s"%(movie_name,genre)

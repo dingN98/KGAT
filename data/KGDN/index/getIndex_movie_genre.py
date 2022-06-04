@@ -1,6 +1,7 @@
 import pandas as pd
+import re
 
-# filepath = 'movies.csv'
+# filepath = '../testData/movies.csv'
 filepath = '../fullData/movies.csv'
 
 csv_result = pd.read_csv(filepath,encoding='utf-8')
@@ -11,7 +12,8 @@ movie_list = []
 
 for line in row_list:
     movie_id = line[0]
-    movie_name = line[1].replace(","," ")
+    movie_name = line[1]
+    movie_name = re.sub(r'[^a-zA-Z0-9 ()]', '', movie_name)
     genres = line[2].split('|')
 
     movie_list.append((movie_name,movie_id))

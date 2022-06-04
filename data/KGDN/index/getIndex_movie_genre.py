@@ -1,7 +1,7 @@
 import pandas as pd
 
 # filepath = 'movies.csv'
-filepath = '../0528/movies.csv'
+filepath = '../fullData/movies.csv'
 
 csv_result = pd.read_csv(filepath,encoding='utf-8')
 row_list = csv_result.values.tolist()
@@ -11,7 +11,7 @@ movie_list = []
 
 for line in row_list:
     movie_id = line[0]
-    movie_name = line[1]
+    movie_name = line[1].replace(","," ")
     genres = line[2].split('|')
 
     movie_list.append((movie_name,movie_id))

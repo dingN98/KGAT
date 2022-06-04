@@ -1,15 +1,15 @@
 import pandas as pd
 import json
 
-filepath = 'metadata.json'
-# filepath = '../0528/movies.csv'
+# filepath = '../testData/metadata.json'
+filepath = '../fullData/metadata.json'
 relation_list = []
 with open(filepath,'r',encoding='utf-8') as f:
     for line in f:
         line = line.strip("\n")
         data = json.loads(line)
 
-        movie_name = data["title"]
+        movie_name = data["title"].replace(","," ")
         directed_by = data["directedBy"]
         avg_rating = data["avgRating"]
 
@@ -19,7 +19,8 @@ with open(filepath,'r',encoding='utf-8') as f:
         relation_list.append(relation_directed_by)
         relation_list.append(relation_avg_rating)
 
-        starring = data["starring"].split(", ")
+        starring = data["starring"].split(",")
+        starring = [i.strip() for i in starring]
         for star in starring:
             relation_starring = "%s,starring,%s"%(movie_name,star)
             relation_list.append(relation_starring)
